@@ -11,3 +11,5 @@ nodes_U = list(pp.df_music_HR_09['user'].unique())
 nodes_O = list(pp.df_music_HR_09['product'].unique())
 
 motifs = bc.count_motifs(B,nodes_U=nodes_U,nodes_O=nodes_O)
+
+print motifs
