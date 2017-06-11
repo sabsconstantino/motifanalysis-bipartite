@@ -16,6 +16,8 @@ nodes_O = list(pp.df_music_HR_11['product'].unique())
 motifs = bc.count_motifs(B,nodes_U=nodes_U,nodes_O=nodes_O)
 
 print motifs 
+# [  5.50400000e+04   6.87974000e+05   1.28211059e+09   1.18810171e+10    
+#    1.45300000e+03   4.89492000e+05]
 
 #---------------------------------------------------------------------
 # exploratory graph analysis
@@ -51,8 +53,8 @@ plt.xlabel("k")
 plt.ylabel("P(k)")
 plt.savefig('plots/pk_music2011_o.png')
 
-print K
-print len(nodes_U)
-print len(nodes_O)
-print avg_kU
-print avg_kO
+print K # 30764
+print len(nodes_U) # 23313
+print len(nodes_O) # 17272
+print avg_kU # 1.31960708618
+print avg_kO # 1.78114867994
