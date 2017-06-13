@@ -31,19 +31,10 @@ def count_motifs(B, nodes_U=None, nodes_O=None):
     nodes_U.sort()
     nodes_O.sort()
 
-    Ba = nx.adjacency_matrix(B,nodes_U+nodes_O)
-    Ba = ssp.dok_matrix(Ba)
-
     k_U,k_O = nx.bipartite.degrees(B,nodes_O)
 
-    # map nodes_U to integers (in case the node names are strings or some other type)
-    # the integers are needed for checking the adjacency matrix
-    nodes_U = dict(zip(nodes_U, np.arange(num_U)))
-    nodes_O = dict(zip(nodes_O, np.arange(num_U,num_U+num_O)))
-
     # finding motifs 0, 2, and 4
-    for u in nodes_U.keys():
-    	print 'user ' + str(u) + ' ' + str(nodes_U[u])
+    for u in nodes_U:
         if k_U[u] >= 2:
             objs = B.neighbors(u)
             pairs = list(it.combinations(objs,2))
@@ -55,8 +46,7 @@ def count_motifs(B, nodes_U=None, nodes_O=None):
                 motifs[4] += len(common_user)
 
     # finding motifs 1, 3, and 5
-    for o in nodes_O.keys():
-    	print 'object ' + str(o) + ' ' + str(nodes_O[o])
+    for o in nodes_O:
         if k_O[o] >= 2:
             usr = B.neighbors(o)
             pairs = list(it.combinations(usr,2))
