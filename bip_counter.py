@@ -45,7 +45,7 @@ def count_motifs(B, nodes_U=None, nodes_O=None):
     for u in nodes_U.keys():
     	print 'user ' + str(u) + ' ' + str(nodes_U[u])
         if k_U[u] >= 2:
-            objs = [o for o in nodes_O.keys() if Ba[nodes_U[u],nodes_O[o]]==1]
+            objs = B.neighbors(u)
             pairs = list(it.combinations(objs,2))
             motifs[0] += len(pairs)
             for p in pairs:
@@ -58,7 +58,7 @@ def count_motifs(B, nodes_U=None, nodes_O=None):
     for o in nodes_O.keys():
     	print 'object ' + str(o) + ' ' + str(nodes_O[o])
         if k_O[o] >= 2:
-            usr = [u for u in nodes_U.keys() if Ba[nodes_U[u],nodes_O[o]]==1]
+            usr = B.neighbors(o)
             pairs = list(it.combinations(usr,2))
             motifs[1] += len(pairs)
             for p in pairs:
@@ -68,6 +68,6 @@ def count_motifs(B, nodes_U=None, nodes_O=None):
     motifs[2] -= motifs[0]
     motifs[3] -= motifs[1]
     motifs[4] = motifs[4]/2
-    motifs[5] = motifs[5]/2 - motifs[4]
+    motifs[5] = ( motifs[5] - motifs[4] ) / 2
 
     return motifs
