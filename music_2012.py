@@ -5,10 +5,10 @@ import bip_counter as bc
 from collections import Counter
 import matplotlib.pyplot as plt
 
-B = nx.from_pandas_dataframe(pp.df_music_HR_14,source='user',target='product')
+B = nx.from_pandas_dataframe(pp.df_music_HR_12,source='user',target='product')
 
-nodes_U = list(pp.df_music_HR_14['user'].unique())
-nodes_O = list(pp.df_music_HR_14['product'].unique())
+nodes_U = list(pp.df_music_HR_12['user'].unique())
+nodes_O = list(pp.df_music_HR_12['product'].unique())
 
 #---------------------------------------------------------------------
 # motif counting
@@ -16,7 +16,8 @@ nodes_O = list(pp.df_music_HR_14['product'].unique())
 motifs = bc.count_motifs(B,nodes_U=nodes_U,nodes_O=nodes_O)
 
 print motifs 
-
+# [  1.27177000e+05   7.67594000e+05   8.98182836e+09   4.71805131e+10
+#   1.66500000e+03   9.76626500e+05]
 
 #---------------------------------------------------------------------
 # exploratory graph analysis
@@ -46,7 +47,7 @@ plt.scatter(kdist_U.keys(), kdist_U.values(),c='b')
 plt.xlim([-10,1000])
 plt.xlabel("k")
 plt.ylabel("P(k)")
-plt.savefig('plots/pk_music2014_u.png')
+plt.savefig('plots/pk_music2012_u.png')
 
 # plotting degree distribution of users
 plt.figure()
@@ -56,10 +57,10 @@ plt.scatter(kdist_O.keys(), kdist_O.values(),c='r')
 plt.xlim([-10,1000])
 plt.xlabel("k")
 plt.ylabel("P(k)")
-plt.savefig('plots/pk_music2014_o.png')
+plt.savefig('plots/pk_music2012_o.png')
 
-print K # 142397
-print len(nodes_U) # 93157
-print len(nodes_O) # 80851
-print avg_kU # 1.52857004841
-print avg_kO # 1.76122744307
+print K # 101556
+print len(nodes_U) # 70641
+print len(nodes_O) # 61469
+print avg_kU # 1.43763536756
+print avg_kO # 1.65214986416

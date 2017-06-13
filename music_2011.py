@@ -17,7 +17,7 @@ motifs = bc.count_motifs(B,nodes_U=nodes_U,nodes_O=nodes_O)
 
 print motifs 
 # [  5.50400000e+04   6.87974000e+05   1.28211059e+09   1.18810171e+10    
-#    1.45300000e+03   4.89492000e+05]
+#    1.45300000e+03   4.90218500e+05]
 
 #---------------------------------------------------------------------
 # exploratory graph analysis
@@ -40,19 +40,24 @@ kcount_O = dict(Counter(k_O.values()))
 kdist_O = {k:v/(K*1.0) for k,v in kcount_O.iteritems()}
 
 # plotting degree distribution of users
-plt.hold(False)
-plt.loglog(kdist_U.keys(), kdist_U.values(),c='b')
+plt.figure()
+plt.xscale('log')
+plt.yscale('log')
+plt.scatter(kdist_U.keys(), kdist_U.values(),c='b')
+plt.xlim([-10,1000])
 plt.xlabel("k")
 plt.ylabel("P(k)")
 plt.savefig('plots/pk_music2011_u.png')
 
 # plotting degree distribution of users
-plt.hold(False)
-plt.loglog(kdist_O.keys(), kdist_O.values(),c='r')
+plt.figure()
+plt.xscale('log')
+plt.yscale('log')
+plt.scatter(kdist_O.keys(), kdist_O.values(),c='r')
+plt.xlim([-10,1000])
 plt.xlabel("k")
 plt.ylabel("P(k)")
 plt.savefig('plots/pk_music2011_o.png')
-
 print K # 30764
 print len(nodes_U) # 23313
 print len(nodes_O) # 17272
