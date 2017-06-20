@@ -1,6 +1,3 @@
-import networkx as nx
-import preprocessing_cumulative as pc
-import preprocessing as pp
 import bip_degrees as bk
 import plfit
 
