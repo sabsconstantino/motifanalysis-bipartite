@@ -14,12 +14,10 @@ def count_motifs(B, nodes_U=None, nodes_O=None):
         Returns
         - motifs[0]: o-u-o
         - motifs[1]: u-o-u
-        - motifs[2]: o-u-o u
-        - motifs[3]: u-o-u o
-        - motifs[4]: square
-        - motifs[5]: o-u-o-u / u-o-u-o
+        - motifs[2]: square
+        - motifs[3]: o-u-o-u / u-o-u-o
     """
-    motifs = np.zeros(6)
+    motifs = np.zeros(4)
 
     if (nodes_U==None and nodes_O==None):
         nodes_U = [u for u,d in B.nodes_iter(data=True) if d['bipartite']==0]
@@ -40,10 +38,9 @@ def count_motifs(B, nodes_U=None, nodes_O=None):
             pairs = list(it.combinations(objs,2))
             motifs[0] += len(pairs)
             for p in pairs:
-                motifs[2] += num_U - (k_O[p[0]] + k_O[p[1]] - 2)
                 # if the two objects have a common user different from u
                 common_user = [j for j in B.neighbors(p[0]) if j in B.neighbors(p[1]) and j != u]
-                motifs[4] += len(common_user)
+                motifs[2] += len(common_user)
 
     # finding motifs 1, 3, and 5
     for o in nodes_O:
@@ -52,12 +49,9 @@ def count_motifs(B, nodes_U=None, nodes_O=None):
             pairs = list(it.combinations(usr,2))
             motifs[1] += len(pairs)
             for p in pairs:
-                motifs[3] += num_O - (k_U[p[0]] + k_U[p[1]] - 2)
-                motifs[5] += k_U[p[0]] + k_U[p[1]] - 2
+                motifs[3] += k_U[p[0]] + k_U[p[1]] - 2
 
-    motifs[2] -= motifs[0]
-    motifs[3] -= motifs[1]
-    motifs[4] = motifs[4]/2
-    motifs[5] = ( motifs[5] - motifs[4] ) / 2
+    motifs[2] = motifs[2]/2
+    motifs[3] = ( motifs[3] - motifs[2] ) / 2
 
     return motifs
