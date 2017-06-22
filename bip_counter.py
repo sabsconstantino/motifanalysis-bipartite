@@ -17,7 +17,7 @@ def count_motifs(B, nodes_U=None, nodes_O=None):
         - motifs[2]: o-u-o-u / u-o-u-o
         - motifs[3]: square
     """
-    motifs = np.zeros(4)
+    motifs = np.zeros(4,dtype=int)
 
     if (nodes_U==None and nodes_O==None):
         nodes_U = [u for u,d in B.nodes_iter(data=True) if d['bipartite']==0]
