@@ -11,15 +11,6 @@ nodes_U = list(pc.df_vg_06['user'].unique())
 nodes_O = list(pc.df_vg_06['product'].unique())
 
 #---------------------------------------------------------------------
-# motif counting
-
-motifs = bc.count_motifs(B,nodes_U=nodes_U,nodes_O=nodes_O)
-
-print motifs 
-#[  4.54735000e+05   6.11477600e+06   3.59172687e+10   7.14350733e+10
-#   1.59230000e+05   3.24215965e+07]
-
-#---------------------------------------------------------------------
 # exploratory graph analysis
 
 # no. of edges
@@ -59,10 +50,19 @@ plt.xlabel("k")
 plt.ylabel("P(k)")
 plt.savefig('plots/pk_vg97-06_o.png')
 
-# power law fitting
+# Printing to file
+mfile = open('motifdata_videogames.csv',mode='a')
+mfile.write('1997-2006,' + str(K) + ',' + str(len(nodes_U)) + ',' + str(len(nodes_O)) + ',' + str(avg_kU) + ',' + str(avg_kO) + ',')
 
-print K # 126514
-print len(nodes_U) # 79129
-print len(nodes_O) # 11694
-print avg_kU # 1.59883228652
-print avg_kO # 10.8187104498
+#---------------------------------------------------------------------
+# motif counting
+motifs = bc.count_motifs(B,nodes_U=nodes_U,nodes_O=nodes_O)
+s = str(motifs)
+s = s.replace('[','')
+s = s.replace(']','')
+s = s.split()
+
+for i in np.arange(len(s)-1):
+	mfile.write(s[i] + ',')
+mfile.write(s[-1])
+mfile.write('\n')

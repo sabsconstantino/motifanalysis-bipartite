@@ -11,15 +11,6 @@ nodes_U = list(pc.df_m_00['user'].unique())
 nodes_O = list(pc.df_m_00['product'].unique())
 
 #---------------------------------------------------------------------
-# motif counting
-
-motifs = bc.count_motifs(B,nodes_U=nodes_U,nodes_O=nodes_O)
-
-print motifs 
-#[  6.05500000e+04   5.67731000e+05   1.01663410e+09   1.73992126e+09
-#   6.70300000e+03   9.35372000e+05]
-
-#---------------------------------------------------------------------
 # exploratory graph analysis
 
 # no. of edges
@@ -59,8 +50,19 @@ plt.xlabel("k")
 plt.ylabel("P(k)")
 plt.savefig('plots/pk_music98-00_o.png')
 
-print K # 23096
-print len(nodes_U) # 16822
-print len(nodes_O) # 3069
-print avg_kU # 1.37296397575
-print avg_kO # 7.52557836429
+# Printing to file
+mfile = open('motifdata_music.csv',mode='a')
+mfile.write('1998-2000,' + str(K) + ',' + str(len(nodes_U)) + ',' + str(len(nodes_O)) + ',' + str(avg_kU) + ',' + str(avg_kO) + ',')
+
+#---------------------------------------------------------------------
+# motif counting
+motifs = bc.count_motifs(B,nodes_U=nodes_U,nodes_O=nodes_O)
+s = str(motifs)
+s = s.replace('[','')
+s = s.replace(']','')
+s = s.split()
+
+for i in np.arange(len(s)-1):
+	mfile.write(s[i] + ',')
+mfile.write(s[-1])
+mfile.write('\n')
