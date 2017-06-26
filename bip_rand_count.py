@@ -22,6 +22,7 @@ def rand_samedegrees(df, col1, col2):
             random.shuffle(sU)
             if (sU[-1],sO[-1]) not in edges:
                 edges.append((sU.pop(), sO.pop()))
+                print len(edges)
         R = nx.Graph()
         R.add_edges_from(edges)
         ensemble_sample.append(R) 
@@ -34,7 +35,7 @@ def get_zscores(count_from_data,rand_ensemble,nodes_U=None,nodes_O=None):
         nodes_O = [o for o,d in B.nodes_iter(data=True) if d['bipartite']==1]
 
     ensemble_counts = np.zeros([len(rand_ensemble),4],dtype=int)
-    for i in np.arange(len(ensemble)):
+    for i in np.arange(len(ensemble_counts)):
         print i
         ensemble_counts[i] = bc.count_subgraphs(rand_ensemble[i], nodes_U, nodes_O)    
 
