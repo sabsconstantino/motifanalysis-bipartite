@@ -16,8 +16,12 @@ def count_subgraphs(B, nodes_U=None, nodes_O=None):
         - subgraphs[1]: u-o-u
         - subgraphs[2]: o-u-o-u / u-o-u-o
         - subgraphs[3]: square
+        - subgraphs[4]: square + u
+        - subgraphs[5]: square + o
+        - subgraphs[6]: "complete" 5 nodes (3 usr + 2 obj)
+        - subgraphs[7]: "complete" 5 nodes (2 usr + 3 obj)
     """
-    subgraphs = np.zeros(4,dtype=int)
+    subgraphs = np.zeros(8,dtype=int)
 
     if (nodes_U==None and nodes_O==None):
         nodes_U = [u for u,d in B.nodes_iter(data=True) if d['bipartite']==0]
@@ -31,12 +35,13 @@ def count_subgraphs(B, nodes_U=None, nodes_O=None):
             objs = B.neighbors(u)
             pairs = list(it.combinations(objs,2))
             subgraphs[0] += len(pairs)
-            for p in pairs:
+            for p in pairs:               
+                subgraphs[2] += ( k_O[p[0]] + k_O[p[1]] - 2 )
                 # if the pairs of objects have a common user other than the current one
                 common_user = [j for j in B.neighbors(p[0]) if j in B.neighbors(p[1]) and j != u]
                 subgraphs[3] += len(common_user)
-
-                subgraphs[2] += ( k_O[p[0]] + k_O[p[1]] - 2 )
+                if common_user:
+                    subgraphs[4] += ( k_O[p[0]] + k_O[p[1]] - 4 )
 
     # finding motif 1
     for o in nodes_O:
@@ -44,8 +49,15 @@ def count_subgraphs(B, nodes_U=None, nodes_O=None):
             usr = B.neighbors(o)
             pairs = list(it.combinations(usr,2))
             subgraphs[1] += len(pairs)
+            for p in pairs:
+                common_obj = [j for j in B.neighbors(p[0]) if j in B.neighbors(p[1]) and j != u]
+                if common_obj:
+                    subgraphs[5] += ( k_U[p[0]] + k_[p[1]] - 4 )
+
 
     subgraphs[3] = subgraphs[3]/2
     subgraphs[2] = subgraphs[2] - 3*subgraphs[3]
+    subgraphs[4] = subgraphs[4]/2
+    subgraphs[5] = subgraphs[5]/2
 
     return subgraphs
