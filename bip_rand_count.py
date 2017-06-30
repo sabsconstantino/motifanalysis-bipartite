@@ -6,26 +6,40 @@ import numpy as np
 
 # This module is generating samples from ensembles of random graphs, and for computing the zscores of the subgraph counts.
 
-def rand_samedegrees(df, col1, col2):
-    nodes_U = list(df[col1])
-    nodes_O = list(df[col2])
-    nodes_O.sort(key=Counter(nodes_O).get,reverse=False) # https://stackoverflow.com/questions/23429426/sorting-a-list-by-frequency-of-occurrence-in-a-list    
+def rand_samedegrees(df, col1, col2, fname=None, fname_start=0, fname_end=100):
+    stubs_U = list(df[col1])
+    stubs_O = list(df[col2])
+    stubs_O.sort(key=Counter(stubs_O).get,reverse=False) # https://stackoverflow.com/questions/23429426/sorting-a-list-by-frequency-of-occurrence-in-a-list     
 
-    ensemble_sample = []    
+    rej_threshold = int(len(stubs_O) * 0.1)
+    print rej_threshold
+    ensemble_sample = [] 
 
-    while len(ensemble_sample) < 100:
+    while len(ensemble_sample) < (fname_end - fname_start):
         print len(ensemble_sample)
-        sU = list(nodes_U)
-        sO = list(nodes_O)
+        sU = list(stubs_U)
+        sO = list(stubs_O)
         edges = []
+        rejected_edges = 0
+        reject_graph = False
         while sO and sU:
-            random.shuffle(sU)
             if (sU[-1],sO[-1]) not in edges:
                 edges.append((sU.pop(), sO.pop()))
                 print len(edges)
-        R = nx.Graph()
-        R.add_edges_from(edges)
-        ensemble_sample.append(R) 
+            else: 
+                random.shuffle(sU)               
+                rejected_edges += 1
+            if rejected_edges > rej_threshold:
+                reject_graph = True
+                break
+
+
+        if not reject_graph:
+            R = nx.Graph()
+            R.add_edges_from(edges)
+            if fname != None:
+                nx.write_gml(R,fname + str(len(ensemble_sample) + fname_start) + ".gml")
+            ensemble_sample.append(R) 
 
     return ensemble_sample  
 
