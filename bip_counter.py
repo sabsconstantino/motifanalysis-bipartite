@@ -14,12 +14,12 @@ def count_subgraphs(B, nodes_U=None, nodes_O=None):
         Returns
         - subgraphs[0]: o-u-o
         - subgraphs[1]: u-o-u
-        - subgraphs[2]: o-u-o-u / u-o-u-o
-        - subgraphs[3]: square
-        - subgraphs[4]: square + u
-        - subgraphs[5]: square + o
-        - subgraphs[6]: "complete" 5 nodes (3 usr + 2 obj)
-        - subgraphs[7]: "complete" 5 nodes (2 usr + 3 obj)
+        - subgraphs[2]: o-u-o u
+        - subgraphs[3]: o-u-o-u / u-o-u-o
+        - subgraphs[4]: square
+        - subgraphs[5]: square + u
+        - subgraphs[6]: square + o
+        - subgraphs[7]: 3 users picking the same 2 objects
     """
     subgraphs = np.zeros(8,dtype=int)
 
@@ -35,13 +35,14 @@ def count_subgraphs(B, nodes_U=None, nodes_O=None):
             objs = B.neighbors(u)
             pairs = list(it.combinations(objs,2))
             subgraphs[0] += len(pairs)
-            for p in pairs:               
-                subgraphs[2] += ( k_O[p[0]] + k_O[p[1]] - 2 )
+            for p in pairs:
+                subgraphs[3] += ( k_O[p[0]] + k_O[p[1]] - 2 )
                 # if the pairs of objects have a common user other than the current one
                 common_user = [j for j in B.neighbors(p[0]) if j in B.neighbors(p[1]) and j != u]
-                subgraphs[3] += len(common_user)
+                subgraphs[4] += len(common_user)
                 if common_user:
-                    subgraphs[4] += ( k_O[p[0]] + k_O[p[1]] - 4 )
+                    subgraphs[5] += ( k_O[p[0]] + k_O[p[1]] - 4 )
+                    subgraphs[7] += len(common_user)*(len(common_user) - 1) / 2
 
     # finding motif 1
     for o in nodes_O:
@@ -52,12 +53,13 @@ def count_subgraphs(B, nodes_U=None, nodes_O=None):
             for p in pairs:
                 common_obj = [j for j in B.neighbors(p[0]) if j in B.neighbors(p[1]) and j != u]
                 if common_obj:
-                    subgraphs[5] += ( k_U[p[0]] + k_[p[1]] - 4 )
+                    subgraphs[6] += ( k_U[p[0]] + k_U[p[1]] - 4 )
 
+                subgraphs[2] += ( len(nodes_O) - ( k_U[p[0]] + k_U[p[1]] - 1 - len(common_obj) ) )
 
-    subgraphs[3] = subgraphs[3]/2
-    subgraphs[2] = subgraphs[2] - 3*subgraphs[3]
     subgraphs[4] = subgraphs[4]/2
+    subgraphs[3] = subgraphs[3] - 3*subgraphs[4]
     subgraphs[5] = subgraphs[5]/2
+    subgraphs[6] = subgraphs[6]/2
 
     return subgraphs
