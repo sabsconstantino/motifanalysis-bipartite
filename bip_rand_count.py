@@ -1,41 +1,66 @@
 import networkx as nx
 import random
-from collections import Counter
+from collections import Counter, OrderedDict
 import bip_counter as bc
 import numpy as np
 
 # This module is generating samples from ensembles of random graphs, and for computing the zscores of the subgraph counts.
 
 def rand_samedegrees(df, col1, col2, fname=None, fname_start=0, fname_end=100):
+    nodes_U = list(df[col1].unique())
+    nodes_O = list(df[col2].unique())
+
     stubs_U = list(df[col1])
     stubs_O = list(df[col2])
-    stubs_O.sort(key=Counter(stubs_O).get,reverse=False) # https://stackoverflow.com/questions/23429426/sorting-a-list-by-frequency-of-occurrence-in-a-list     
+    stubs_U.sort()
+    stubs_O.sort()
 
-    rej_threshold = int(len(stubs_O) * 0.1)
+    k_U = OrderedDict(Counter(stubs_U))
+    k_O = OrderedDict(Counter(stubs_O))
+
+    # map user and object names to numbers, since nx.bipartite_configuration_model names nodes with numbers
+    nodes_all = k_U.keys()
+    nodes_all.extend(k_O.keys())
+    mapping = dict(zip(np.arange(len(nodes_all)), nodes_all))
+    rej_threshold = int(len(stubs_O) * 0.03)
     ensemble_sample = [] 
+
+    reject_graph = False
 
     while len(ensemble_sample) < (fname_end - fname_start):
         print len(ensemble_sample)
-        sU = list(stubs_U)
-        sO = list(stubs_O)
-        edges = []
-        rejected_edges = 0
-        reject_graph = False
-        while sO and sU:
-            if (sU[-1],sO[-1]) not in edges:
-                edges.append((sU.pop(), sO.pop()))
-                print len(edges)
-            else: 
-                random.shuffle(sU)               
-                rejected_edges += 1
-            if rejected_edges > rej_threshold:
-                reject_graph = True
-                break
+        R = nx.bipartite.configuration_model(k_U.values(),k_O.values(),create_using=nx.Graph())
+        nx.relabel_nodes(R,mapping,copy=False)
+        rej_ct = len(stubs_U) - len(R.edges())
+        if rej_ct > rej_threshold:
+            reject_graph = True
+        else:
+            # get remaining stubs
+            k_Uin,k_Oin = nx.bipartite.degrees(R,nodes_O)
+            remaining_U = list((Counter(stubs_U)-Counter(k_Uin)).elements())
+            remaining_O = list((Counter(stubs_O)-Counter(k_Oin)).elements())
+            remaining_O.sort(key=Counter(remaining_O).get,reverse=False)
 
+            random.shuffle(remaining_U)
+            current_rej = 0
+            while remaining_O and remaining_U:
+                print len(remaining_O)
+                prev_edgect = len(R.edges())
+                R.add_edge(remaining_U[-1],remaining_O[-1])
+                if prev_edgect < len(R.edges()): # if adding the edge was successful; i.e. the edge is not yet in the graph
+                    remaining_U.pop()
+                    remaining_O.pop()
+                    current_rej = 0
+                else:
+                    random.shuffle(remaining_U)
+                    rej_ct += 1
+                    current_rej += 1
+                    print 'total rejections: ' + str(rej_ct) + ' and current rejections: ' + str(current_rej)
+                if rej_ct > rej_threshold or current_rej > len(remaining_U) or current_rej > 100:
+                    reject_graph = True
+                    break
 
-        if not reject_graph:
-            R = nx.Graph()
-            R.add_edges_from(edges)
+        if reject_graph == False:
             if fname != None:
                 nx.write_gml(R,fname + str(len(ensemble_sample) + fname_start) + ".gml")
             ensemble_sample.append(R) 
