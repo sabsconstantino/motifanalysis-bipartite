@@ -25,9 +25,8 @@ def rand_samedegrees(df, col1, col2, fname=None, fname_start=0, fname_end=100):
     rej_threshold = int(len(stubs_O) * 0.03)
     ensemble_sample = [] 
 
-    reject_graph = False
-
     while len(ensemble_sample) < (fname_end - fname_start):
+        reject_graph = False
         print len(ensemble_sample)
         R = nx.bipartite.configuration_model(k_U.values(),k_O.values(),create_using=nx.Graph())
         nx.relabel_nodes(R,mapping,copy=False)
@@ -56,7 +55,7 @@ def rand_samedegrees(df, col1, col2, fname=None, fname_start=0, fname_end=100):
                     rej_ct += 1
                     current_rej += 1
                     print 'total rejections: ' + str(rej_ct) + ' and current rejections: ' + str(current_rej)
-                if rej_ct > rej_threshold or current_rej > len(remaining_U) or current_rej > 100:
+                if rej_ct > rej_threshold or current_rej > 100:
                     reject_graph = True
                     break
 
