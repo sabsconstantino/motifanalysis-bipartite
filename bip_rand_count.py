@@ -6,31 +6,25 @@ import numpy as np
 
 # This module is generating samples from ensembles of random graphs, and for computing the zscores of the subgraph counts.
 
-def rand_samedegrees(df, col1, col2, fname=None, fname_start=0, fname_end=100):
+def rand_samedegrees(df, col1, col2, fname, fname_start=0, fname_end=100):
     nodes_U = list(df[col1].unique())
     nodes_O = list(df[col2].unique())
 
     stubs_U = list(df[col1])
     stubs_O = list(df[col2])
-    stubs_U.sort()
-    stubs_O.sort()
+    stubs_O.sort(key=Counter(stubs_O).get,reverse=False)
 
-    k_U = OrderedDict(Counter(stubs_U))
-    k_O = OrderedDict(Counter(stubs_O))
-
-    # map user and object names to numbers, since nx.bipartite_configuration_model names nodes with numbers
-    nodes_all = k_U.keys()
-    nodes_all.extend(k_O.keys())
-    mapping = dict(zip(np.arange(len(nodes_all)), nodes_all))
     rej_threshold = int(len(stubs_O) * 0.03)
-    ensemble_sample = [] 
+    num_graphs = 0
 
-    while len(ensemble_sample) < (fname_end - fname_start):
+    while num_graphs < (fname_end - fname_start):
         reject_graph = False
-        print len(ensemble_sample)
-        R = nx.bipartite.configuration_model(k_U.values(),k_O.values(),create_using=nx.Graph())
-        nx.relabel_nodes(R,mapping,copy=False)
-        rej_ct = len(stubs_U) - len(R.edges())
+        print num_graphs
+        random.shuffle(stubs_U)
+        init_edges = zip(stubs_O,stubs_U)
+        R = nx.Graph()
+        R.add_edges_from(init_edges)
+        rej_ct = len(stubs_O) - len(R.edges())
         if rej_ct > rej_threshold:
             reject_graph = True
         else:
@@ -55,18 +49,16 @@ def rand_samedegrees(df, col1, col2, fname=None, fname_start=0, fname_end=100):
                     rej_ct += 1
                     current_rej += 1
                     print 'total rejections: ' + str(rej_ct) + ' and current rejections: ' + str(current_rej)
-                if rej_ct > rej_threshold or current_rej > 100:
+                if rej_ct > rej_threshold or current_rej > 100 or (len(remaining_U) == 1 and current_rej > 1):
                     reject_graph = True
                     break
 
         if reject_graph == False:
-            if fname != None:
-                nx.write_gml(R,fname + str(len(ensemble_sample) + fname_start) + ".gml")
-            ensemble_sample.append(R) 
+            nx.write_gml(R,fname + str(num_graphs + fname_start) + ".gml")
+            num_graphs += 1
 
-    return ensemble_sample
 
-def rand_sameU_randO(df, col1, col2, fname=None, fname_start=0, fname_end=100):
+def rand_sameU_randO(df, col1, col2, fname_start=0, fname_end=100):
     stubs_U = list(df[col1])
     nodes_O = list(df[col2].unique())
 
@@ -109,22 +101,24 @@ def rand_sameU_randO(df, col1, col2, fname=None, fname_start=0, fname_end=100):
                     remaining_stubs = list((c_all-c_in).elements())
 
         if not reject_graph:
-            if fname != None:
-                nx.write_gml(R,fname + str(len(ensemble_sample) + fname_start) + ".gml")
-            ensemble_sample.append(R) 
+            nx.write_gml(R,fname + str(len(ensemble_sample) + fname_start) + ".gml")
 
-    return ensemble_sample 
-
-def get_zscores(count_from_data,rand_ensemble,nodes_U=None,nodes_O=None):
+def get_zscores(count_from_data,fname,fname_start=0,fname_end=100,nodes_U=None,nodes_O=None):
     if (nodes_U==None and nodes_O==None):
         nodes_U = [u for u,d in B.nodes_iter(data=True) if d['bipartite']==0]
         nodes_O = [o for o,d in B.nodes_iter(data=True) if d['bipartite']==1]
 
     num_subgraphs = len(count_from_data)
-    ensemble_counts = np.zeros([len(rand_ensemble),num_subgraphs],dtype=int)
-    for i in np.arange(len(ensemble_counts)):
-        print i
-        ensemble_counts[i] = bc.count_subgraphs(rand_ensemble[i], nodes_U, nodes_O)    
+    num_rg = fname_end - fname_start
+    ensemble_counts = np.zeros([num_rg,num_subgraphs],dtype=np.int64)
+    i = 0
+    while i < num_rg:
+        nth = fname_start + i
+        G = nx.read_gml(fname + str(nth) + ".gml")
+        ensemble_counts[i] = bc.count_subgraphs(G, nodes_U=nodes_U, nodes_O=nodes_O)
+        print nth
+        i += 1
+        del G
 
     zscores = np.zeros(num_subgraphs,dtype=np.float64)
     mjus = np.mean(ensemble_counts,axis=0)
