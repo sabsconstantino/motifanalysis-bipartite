@@ -39,12 +39,12 @@ def count_subgraphs(B, nodes_U=None, nodes_O=None):
             for p in pairs:
                 subgraphs[3] += ( k_O[p[0]] + k_O[p[1]] - 2 )
                 # if the pairs of objects have a common user other than the current one
-                common_user = [j for j in B.neighbors(p[0]) if j in B.neighbors(p[1]) and j != u]
-                subgraphs[4] += len(common_user)
+                common_user = len(set(B.neighbors(p[0])).intersection(set(B.neighbors(p[1]))))
+                subgraphs[4] += (common_user - 1)
                 if common_user:
                     subgraphs[5] += ( k_O[p[0]] + k_O[p[1]] - 4 )
-                    subgraphs[7] += (len(common_user) + 1)*len(common_user)*(len(common_user) - 1) / 6
-                subgraphs[2] += num_U - ( k_O[p[0]] + k_O[p[1]] - 1 - len(common_user) ) 
+                    subgraphs[7] += common_user*(common_user-1)*(common_user-2) / 6
+                subgraphs[2] += num_U - ( k_O[p[0]] + k_O[p[1]] - common_user ) 
 
     # finding motif 1
     for o in nodes_O:
@@ -53,7 +53,7 @@ def count_subgraphs(B, nodes_U=None, nodes_O=None):
             pairs = list(it.combinations(usr,2))
             subgraphs[1] += len(pairs)
             for p in pairs:
-                common_obj = [j for j in B.neighbors(p[0]) if j in B.neighbors(p[1]) and j != u]
+                common_obj = len(set(B.neighbors(p[0])).intersection(set(B.neighbors(p[1]))))
                 if common_obj:
                     subgraphs[6] += ( k_U[p[0]] + k_U[p[1]] - 4 )
 
