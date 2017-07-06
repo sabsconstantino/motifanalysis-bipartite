@@ -6,96 +6,55 @@ import numpy as np
 
 # This module is generating samples from ensembles of random graphs, and for computing the zscores of the subgraph counts.
 
-def rand_samedegrees(df, col1, col2, fname, pct_cap=1, fname_start=0, fname_end=100):
-    nodes_U = list(df[col1].unique())
-    nodes_O = list(df[col2].unique())
-
+def rand_samedegrees(df, col1, col2, fname, fname_start=0, fname_end=100):
     stubs_U = list(df[col1])
     stubs_O = list(df[col2])
+    stubs_U.sort(key=Counter(stubs_U).get,reverse=False)
     stubs_O.sort(key=Counter(stubs_O).get,reverse=False)
+
+    nodes_O = Counter(stubs_O).most_common()
 
     num_graphs = 0
 
     while num_graphs < (fname_end - fname_start):
-        reject_graph = False
         print num_graphs
-        random.shuffle(stubs_U)
-        init_cap = int(len(stubs_U)*pct_cap) # number of edges to be added initially
-        init_edges = zip(stubs_O[0:init_cap],stubs_U[0:init_cap])
+        k_U = Counter(stubs_U)
+
+        edges = []
+        for o in nodes_O:
+            print o
+            users = np.random.choice(k_U.keys(),o[1],replace=False)
+            edges.extend(zip( [o[0]]*o[1], users) )
+            for u in users:
+                if k_U[u] == 1:
+                    del k_U[u]
+                else:
+                    k_U[u] = k_U[u]-1
+
         R = nx.Graph()
-        R.add_edges_from(init_edges)
-        
-        # get remaining stubs
-        k_Uin,k_Oin = nx.bipartite.degrees(R,nodes_O)
-        remaining_U = list((Counter(stubs_U)-Counter(k_Uin)).elements())
-        remaining_O = list((Counter(stubs_O)-Counter(k_Oin)).elements())
-        remaining_O.sort(key=Counter(remaining_O).get,reverse=False)
+        R.add_edges_from(edges)
+        nx.write_gml(R,fname + str(num_graphs + fname_start) + ".gml")
+        num_graphs += 1
 
-        random.shuffle(remaining_U)
-        current_rej = 0
-        while remaining_O and remaining_U:
-            print len(remaining_O)
-            prev_edgect = len(R.edges())
-            R.add_edge(remaining_U[-1],remaining_O[-1])
-            if prev_edgect < len(R.edges()): # if adding the edge was successful; i.e. the edge is not yet in the graph
-                del remaining_U[-1]
-                del remaining_O[-1]
-                current_rej = 0
-            else:
-                random.shuffle(remaining_U)
-                current_rej += 1
-            if current_rej > 100 or (len(remaining_U) == 1 and current_rej > 1):
-                reject_graph = True
-                break
-
-        if reject_graph == False:
-            nx.write_gml(R,fname + str(num_graphs + fname_start) + ".gml")
-            num_graphs += 1
-
-def rand_sameU_randO(df, col1, col2, fname_start=0, fname_end=100):
-    stubs_U = list(df[col1])
+def rand_sameU_randO(df, col1, col2, fname, fname_start=0, fname_end=100):
+    k_U = Counter(list(df[col1]))
     nodes_O = list(df[col2].unique())
 
-    num_edges = len(stubs_U)
-    rej_threshold = int(len(stubs_U) * 0.1)
-    ensemble_sample = [] 
+    num_graphs = 0
 
-    while len(ensemble_sample) < (fname_end - fname_start):
-        print len(ensemble_sample)
-        print(rej_threshold)
+    while num_graphs < (fname_end - fname_start):
+        print num_graphs
+
         edges = []
-        rejected_edges = 0
-        reject_graph = False
-        R = nx.Graph()
-        stubs_O = np.random.choice(nodes_O, num_edges, replace=True)
-        R.add_edges_from(zip(stubs_U,stubs_O))
-        if len(R.edges()) < num_edges - rej_threshold:
-            reject_graph = True
-            break
-        else:
-            # get stubs remaining
-            stubs_in = [e[0] for e in R.edges()]
-            c_all = Counter(stubs_U)
-            c_in = Counter(stubs_in)
-            remaining_stubs = list((c_all-c_in).elements())
-            rej_ct = len(remaining_stubs)
-            while remaining_stubs:
-                print(len(remaining_stubs))
-                stubs_O = np.random.choice(nodes_O, len(remaining_stubs), replace=True)
-                prev_edgect = len(R.edges())
-                R.add_edges_from(zip(stubs_U,stubs_O))
-                rej_ct += (len(R.edges()) - prev_edgect)
-                print rej_ct
-                if rej_ct > rej_threshold:
-                    reject_graph = True
-                    break
-                else:
-                    stubs_in = [e[0] for e in R.edges()]
-                    c_in = Counter(stubs_in)
-                    remaining_stubs = list((c_all-c_in).elements())
+        for u in k_U.keys():
+            print u
+            objects = np.random.choice(nodes_O,k_U[u],replace=False)
+            edges.extend(zip( [u]*k_U[u], objects) )
 
-        if not reject_graph:
-            nx.write_gml(R,fname + str(len(ensemble_sample) + fname_start) + ".gml")
+        R = nx.Graph()
+        R.add_edges_from(edges)
+        nx.write_gml(R,fname + str(num_graphs + fname_start) + ".gml")
+        num_graphs += 1
 
 def get_zscores(count_from_data,fname,fname_start=0,fname_end=100,nodes_U=None,nodes_O=None):
     if (nodes_U==None and nodes_O==None):
