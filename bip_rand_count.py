@@ -3,6 +3,7 @@ import random
 from collections import Counter, OrderedDict
 import bip_counter as bc
 import numpy as np
+from datetime import datetime as dt
 
 # This module is generating samples from ensembles of random graphs, and for computing the zscores of the subgraph counts.
 
@@ -12,6 +13,10 @@ def rand_samedegrees(df, col1, col2, fname, fname_start=0, fname_end=100):
     stubs_U.sort(key=Counter(stubs_U).get,reverse=False)
     stubs_O.sort(key=Counter(stubs_O).get,reverse=False)
 
+    R = nx.Graph()
+    R.add_nodes_from(set(stubs_U), bipartite='u')
+    R.add_nodes_from(set(stubs_O), bipartite='o')
+    
     nodes_O = Counter(stubs_O).most_common()
 
     num_graphs = 0
@@ -31,15 +36,19 @@ def rand_samedegrees(df, col1, col2, fname, fname_start=0, fname_end=100):
                 else:
                     k_U[u] = k_U[u]-1
 
-        R = nx.Graph()
         R.add_edges_from(edges)
         nx.write_gml(R,fname + str(num_graphs + fname_start) + ".gml")
         num_graphs += 1
 
 def rand_sameU_randO(df, col1, col2, fname, fname_start=0, fname_end=100):
     k_U = Counter(list(df[col1]))
+    nodes_U = list(df[col1].unique())
     nodes_O = list(df[col2].unique())
 
+    R = nx.Graph()
+    R.add_nodes_from(nodes_O, bipartite='u')
+    R.add_nodes_from(nodes_U, bipartite='o')
+    
     num_graphs = 0
 
     while num_graphs < (fname_end - fname_start):
@@ -51,16 +60,11 @@ def rand_sameU_randO(df, col1, col2, fname, fname_start=0, fname_end=100):
             objects = np.random.choice(nodes_O,k_U[u],replace=False)
             edges.extend(zip( [u]*k_U[u], objects) )
 
-        R = nx.Graph()
         R.add_edges_from(edges)
         nx.write_gml(R,fname + str(num_graphs + fname_start) + ".gml")
         num_graphs += 1
 
 def get_zscores(count_from_data,fname,fname_start=0,fname_end=100,nodes_U=None,nodes_O=None):
-    if (nodes_U==None and nodes_O==None):
-        nodes_U = [u for u,d in B.nodes_iter(data=True) if d['bipartite']==0]
-        nodes_O = [o for o,d in B.nodes_iter(data=True) if d['bipartite']==1]
-
     num_subgraphs = len(count_from_data)
     num_rg = fname_end - fname_start
     ensemble_counts = np.zeros([num_rg,num_subgraphs],dtype=np.int64)
@@ -69,7 +73,7 @@ def get_zscores(count_from_data,fname,fname_start=0,fname_end=100,nodes_U=None,n
         nth = fname_start + i
         G = nx.read_gml(fname + str(nth) + ".gml")
         ensemble_counts[i] = bc.count_subgraphs(G, nodes_U=nodes_U, nodes_O=nodes_O)
-        print nth
+        print str(nth) +' '+ str(dt.now())
         i += 1
         del G
 
