@@ -27,7 +27,6 @@ def rand_samedegrees(df, col1, col2, fname, fname_start=0, fname_end=100):
 
         edges = []
         for o in nodes_O:
-            print o
             users = np.random.choice(k_U.keys(),o[1],replace=False)
             edges.extend(zip( [o[0]]*o[1], users) )
             for u in users:
@@ -56,7 +55,6 @@ def rand_sameU_randO(df, col1, col2, fname, fname_start=0, fname_end=100):
 
         edges = []
         for u in k_U.keys():
-            print u
             objects = np.random.choice(nodes_O,k_U[u],replace=False)
             edges.extend(zip( [u]*k_U[u], objects) )
 
