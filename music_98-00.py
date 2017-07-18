@@ -5,10 +5,15 @@ import bip_counter as bc
 from collections import Counter
 import matplotlib.pyplot as plt
 
-B = nx.from_pandas_dataframe(pc.df_m_00,source='user',target='product')
-
 nodes_U = list(pc.df_m_00['user'].unique())
 nodes_O = list(pc.df_m_00['product'].unique())
+
+num_U = len(nodes_U)
+num_O = len(nodes_O)
+
+B = nx.from_pandas_dataframe(pc.df_m_00,source='user',target='product')
+nx.set_node_attributes(B, 'bipartite', dict(zip(nodes_U,['u']*num_U)))
+nx.set_node_attributes(B, 'bipartite', dict(zip(nodes_O,['o']*num_O)))
 
 #---------------------------------------------------------------------
 # exploratory graph analysis
@@ -20,8 +25,8 @@ K = len(B.edges())
 k_U,k_O = nx.bipartite.degrees(B,nodes_O)
 
 # average degree
-avg_kU = sum(k_U.values()) / (len(nodes_U)*1.00)
-avg_kO = sum(k_O.values()) / (len(nodes_O)*1.00)
+avg_kU = sum(k_U.values()) / (num_U*1.00)
+avg_kO = sum(k_O.values()) / (num_O*1.00)
 
 # degree distribution
 kcount_U = dict(Counter(k_U.values()))
@@ -50,18 +55,17 @@ plt.xlabel("k")
 plt.ylabel("P(k)")
 plt.savefig('plots/pk_music98-00_o.png')
 
-# Printing to file
-mfile = open('motifdata_music.csv',mode='a')
-mfile.write('1998-2000,' + str(K) + ',' + str(len(nodes_U)) + ',' + str(len(nodes_O)) + ',' + str(avg_kU) + ',' + str(avg_kO) + ',')
-
 #---------------------------------------------------------------------
-# motif counting
-motifs = bc.count_motifs(B,nodes_U=nodes_U,nodes_O=nodes_O)
-s = str(motifs)
+# subgraph counting
+subgraphs = bc.count_subgraphs(B)
+s = str(subgraphs)
 s = s.replace('[','')
 s = s.replace(']','')
 s = s.split()
 
+# Printing to file
+mfile = open('subgraphdata_music.csv',mode='a')
+mfile.write('1998-2000,' + str(K) + ',' + str(num_U) + ',' + str(num_O) + ',' + str(avg_kU) + ',' + str(avg_kO) + ',')
 for i in np.arange(len(s)-1):
 	mfile.write(s[i] + ',')
 mfile.write(s[-1])
