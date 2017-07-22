@@ -24,6 +24,10 @@ K = len(B.edges())
 # degrees
 k_U,k_O = nx.bipartite.degrees(B,nodes_O)
 
+# recompute number of edges,degrees
+K = len(B.edges())
+k_U,k_O = nx.bipartite.degrees(B,nodes_O)
+
 # average degree
 avg_kU = sum(k_U.values()) / (num_U*1.00)
 avg_kO = sum(k_O.values()) / (num_O*1.00)
@@ -57,16 +61,16 @@ plt.savefig('plots/pk_vg97-14_o.png')
 
 #---------------------------------------------------------------------
 # subgraph counting
-subgraphs = bc.count_subgraphs(B)
-s = str(subgraphs)
-s = s.replace('[','')
-s = s.replace(']','')
-s = s.split()
+# subgraphs = bc.count_subgraphs(B)
+# s = str(subgraphs)
+# s = s.replace('[','')
+# s = s.replace(']','')
+# s = s.split()
 
-# Printing to file
-mfile = open('subgraphdata_videogames.csv',mode='a')
-mfile.write('1997-2014,' + str(K) + ',' + str(num_U) + ',' + str(num_O) + ',' + str(avg_kU) + ',' + str(avg_kO) + ',')
-for i in np.arange(len(s)-1):
-	mfile.write(s[i] + ',')
-mfile.write(s[-1])
-mfile.write('\n')
+# # Printing to file
+# mfile = open('subgraphdata_videogames.csv',mode='a')
+# mfile.write('1997-2014,' + str(K) + ',' + str(num_U) + ',' + str(num_O) + ',' + str(avg_kU) + ',' + str(avg_kO) + ',')
+# for i in np.arange(len(s)-1):
+# 	mfile.write(s[i] + ',')
+# mfile.write(s[-1])
+# mfile.write('\n')

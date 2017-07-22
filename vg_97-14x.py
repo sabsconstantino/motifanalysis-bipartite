@@ -5,13 +5,13 @@ import bip_counter as bc
 from collections import Counter
 import matplotlib.pyplot as plt
 
-nodes_U = list(pc.df_vg_09['user'].unique())
-nodes_O = list(pc.df_vg_09['product'].unique())
+nodes_U = list(pc.df_vg_14x['user'].unique())
+nodes_O = list(pc.df_vg_14x['product'].unique())
 
 num_U = len(nodes_U)
 num_O = len(nodes_O)
 
-B = nx.from_pandas_dataframe(pc.df_vg_09,source='user',target='product')
+B = nx.from_pandas_dataframe(pc.df_vg_14x,source='user',target='product')
 nx.set_node_attributes(B, 'bipartite', dict(zip(nodes_U,['u']*num_U)))
 nx.set_node_attributes(B, 'bipartite', dict(zip(nodes_O,['o']*num_O)))
 
@@ -22,6 +22,10 @@ nx.set_node_attributes(B, 'bipartite', dict(zip(nodes_O,['o']*num_O)))
 K = len(B.edges())
 
 # degrees
+k_U,k_O = nx.bipartite.degrees(B,nodes_O)
+
+# recompute number of edges,degrees
+K = len(B.edges())
 k_U,k_O = nx.bipartite.degrees(B,nodes_O)
 
 # average degree
@@ -43,7 +47,7 @@ plt.scatter(kdist_U.keys(), kdist_U.values(),c='b')
 plt.xlim([-10,1000])
 plt.xlabel("k")
 plt.ylabel("P(k)")
-plt.savefig('plots/pk_vg97-09_u.png')
+plt.savefig('plots/pk_vg97-14x_u.png')
 
 # plotting degree distribution of users
 plt.figure()
@@ -53,9 +57,9 @@ plt.scatter(kdist_O.keys(), kdist_O.values(),c='r')
 plt.xlim([-10,1000])
 plt.xlabel("k")
 plt.ylabel("P(k)")
-plt.savefig('plots/pk_vg97-09_o.png')
+plt.savefig('plots/pk_vg97-14x_o.png')
 
-#---------------------------------------------------------------------
+# #---------------------------------------------------------------------
 # subgraph counting
 subgraphs = bc.count_subgraphs(B)
 s = str(subgraphs)
@@ -65,7 +69,7 @@ s = s.split()
 
 # Printing to file
 mfile = open('subgraphdata_videogames.csv',mode='a')
-mfile.write('1997-2009,' + str(K) + ',' + str(num_U) + ',' + str(num_O) + ',' + str(avg_kU) + ',' + str(avg_kO) + ',')
+mfile.write('1997-2014x,' + str(K) + ',' + str(num_U) + ',' + str(num_O) + ',' + str(avg_kU) + ',' + str(avg_kO) + ',')
 for i in np.arange(len(s)-1):
 	mfile.write(s[i] + ',')
 mfile.write(s[-1])
