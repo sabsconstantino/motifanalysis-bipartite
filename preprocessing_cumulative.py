@@ -55,5 +55,10 @@ df_vg_09 = df_vg_09[[0,1]]
 df_vg_12 = df_vg[df_vg['timestamp'].dt.year <= 2012]
 df_vg_12 = df_vg_12[[0,1]]
 
+# video games 1997-2014 with most purchased object
 df_vg_14 = df_vg[df_vg['timestamp'].dt.year <= 2014]
 df_vg_14 = df_vg_14[[0,1]]
+
+# video games 1997-2014 WITHOUT most-bought object
+most_purchased = df_vg_14['product'].value_counts().idxmax()
+df_vg_14x = df_vg_14[ df_vg_14['product'] != most_purchased]
