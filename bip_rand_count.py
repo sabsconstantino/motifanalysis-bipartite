@@ -35,7 +35,7 @@ def rand_samedegrees(df, col1, col2, fname, fname_start=0, fname_end=100):
                     k_U[u] = k_U[u]-1
 
         R.add_edges_from(edges)
-        nx.write_gml(R,fname + str(num_graphs + fname_start) + ".gml")
+        nx.write_gml(R,fname + str(num_graphs + fname_start) + ".gml.gz")
         num_graphs += 1
 
 def rand_sameU_randO(df, col1, col2, fname, fname_start=0, fname_end=100):
@@ -57,17 +57,20 @@ def rand_sameU_randO(df, col1, col2, fname, fname_start=0, fname_end=100):
             edges.extend(zip( [u]*k_U[u], objects) )
 
         R.add_edges_from(edges)
-        nx.write_gml(R,fname + str(num_graphs + fname_start) + ".gml")
+        nx.write_gml(R,fname + str(num_graphs + fname_start) + ".gml.gz")
         num_graphs += 1
 
-def get_zscores(count_from_data,fname,fname_start=0,fname_end=100,nodes_U=None,nodes_O=None,outfile=None):
+def get_zscores(count_from_data,fname,is_compressed=True,fname_start=0,fname_end=100,nodes_U=None,nodes_O=None,outfile=None):
     num_subgraphs = len(count_from_data)
     num_rg = fname_end - fname_start
     ensemble_counts = np.zeros([num_rg,num_subgraphs],dtype=np.int64)
     i = 0
     while i < num_rg:
         nth = fname_start + i
-        G = nx.read_gml(fname + str(nth) + ".gml")
+        if not is_compressed:
+            G = nx.read_gml(fname + str(nth) + ".gml")
+        else:
+            G = nx.read_gml(fname + str(nth) + ".gml.gz")
         ensemble_counts[i] = bc.count_subgraphs(G, nodes_U=nodes_U, nodes_O=nodes_O)
         print str(nth) +' '+ str(dt.now())
         i += 1
