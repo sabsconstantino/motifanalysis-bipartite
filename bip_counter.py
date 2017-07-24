@@ -2,6 +2,7 @@ import networkx as nx
 import numpy as np
 import itertools as it
 from collections import defaultdict
+import scipy.sparse as ssp
 
 def count_subgraphs(B, nodes_U=None, nodes_O=None):
     """Counts subgraphs of a bipartite user-object graph
@@ -36,62 +37,88 @@ def count_subgraphs(B, nodes_U=None, nodes_O=None):
     num_O = len(nodes_O)
 
     # relabel nodes to integers to save space
-    B = nx.relabel_nodes(B, dict(zip(nodes_O+nodes_U,np.arange(num_O+num_U))), copy=False)
+    B = nx.relabel_nodes(B, dict(zip(nodes_U+nodes_O,np.arange(num_U+num_O))), copy=False)
 
     # clear lists of node labels
     del nodes_U, nodes_O
 
-    k_U,k_O = nx.bipartite.degrees(B,np.arange(num_O)) # get node degrees
+    k_U,k_O = nx.bipartite.degrees(B,np.arange(num_U,num_U+num_O)) # get node degrees
 
-    # https://stackoverflow.com/questions/27801945/surprising-results-with-python-timeit-counter-vs-defaultdict-vs-dict
-    # initialise dictionary of pair counts
-    ct_pairs_O = defaultdict(int)
-    ct_pairs_U = defaultdict(int)
-
-    # populate dictionary counting pairs of objects bought by each user
-    for u in np.arange(num_O,num_O+num_U):
+    # use sparse matrix to store counts of possible pairs of users who bought each object
+    row = []
+    col = []
+    for u in xrange(num_U):
         if k_U[u] >= 2:
             objs = B.neighbors(u)
             objs.sort()
-            pairs_O = it.combinations(objs,2) # all possible pairs of objects bought by user u
-            for p in pairs_O: #counting
-                ct_pairs_O[p] += 1
+            o1,o2 = zip(*it.combinations(objs,2)) # all possible pairs of objects bought by user u
+            row.extend(o1)
+            col.extend(o2)
+    pairs_O = ssp.coo_matrix((np.ones(len(row)),(row,col)),shape=(num_O+num_U,num_O+num_U)).tocsr()
 
-    # counting o-u-o subgraphs
-    subgraphs[0] = sum(ct_pairs_O.values())
+    # build the sparse matrices needed for the other subgraph computations
+    row,col = pairs_O.nonzero()
+    matrix_numU = ssp.coo_matrix(([num_U]*len(row),(row,col)),shape=(num_O+num_U,num_O+num_U)).tocsr()
+    data_ksum = [ k_O[row[i]] + k_O[col[i]] for i in xrange(len(row)) ]
+    pairsO_ksum = ssp.coo_matrix((data_ksum,(row,col)),shape=(num_O+num_U,num_O+num_U)).tocsr()
 
-    # separating pairs of objects according to count (1 / greater than 1)
-    ct_pairs_O_1 = {k:v for k,v in ct_pairs_O.items() if v <= 1}
-    ct_pairs_O = {k:v for k,v in ct_pairs_O.items() if v > 1}
+    # counting o-u-o and o-u-o u subgraphs
+    subgraphs[0] = pairs_O.sum()
+    subgraphs[2] = (matrix_numU - (pairsO_ksum - pairs_O)).sum()
 
-    # counting o-u-o u and o-u-o-u subgraphs (the latter is only possible when ct_pairs_O[p] = 1)
-    subgraphs[2] += sum(( num_U - (k_O[p[0]] + k_O[p[1]] - ct_pairs_O_1[p]) ) for p in ct_pairs_O_1.keys())
-    subgraphs[3] = sum(( k_O[p[0]] + k_O[p[1]] - 2 ) for p in ct_pairs_O_1.keys())
+    # building sparse matrices needed for o-u-o-u subgraphs (which is only possible when pairs_O[p] = 1)
+    row,col = (pairs_O == 1).nonzero()
+    data_ksum = [ k_O[row[i]] + k_O[col[i]] for i in xrange(len(row)) ]
+    pairs_O1 = ((pairs_O == 1).astype(np.int8)).tocsr()
+    pairs_O1_ksum = ssp.coo_matrix((data_ksum,(row,col)),shape=(num_O+num_U,num_O+num_U)).tocsr()
+    
+    # counting o-u-o u and o-u-o-u subgraphs
+    subgraphs[3] = (pairs_O1_ksum - (2*pairs_O1)).sum()
+    del pairs_O1,pairs_O1_ksum
+
+    # build more sparse matrices needed for the other subgraph computations
+    row,col = (pairs_O > 1).nonzero()
+    data_minusone = [ pairs_O[row[i],col[i]]-1 for i in xrange(len(row)) ] 
+    data_minustwo = [ pairs_O[row[i],col[i]]-2 for i in xrange(len(row)) ]
+    pairs_O = pairs_O.tocsr()
+    pairs_O_m1 = ssp.coo_matrix((data_minusone,(row,col)),shape=(num_O+num_U,num_O+num_U)).tocsr()
+    pairs_O_m2 = ssp.coo_matrix((data_minustwo,(row,col)),shape=(num_O+num_U,num_O+num_U)).tocsr()
 
     # counting o-u-o u, square, square+u, and 3-user-same-2-obj subgraphs
-    subgraphs[2] += sum(( num_U - (k_O[p[0]] + k_O[p[1]] - ct_pairs_O[p]) ) for p in ct_pairs_O.keys())
-    subgraphs[4] = sum(( ct_pairs_O[p]*(ct_pairs_O[p]-1) / 2 ) for p in ct_pairs_O.keys())
-    subgraphs[5] = sum(( ct_pairs_O[p]*(ct_pairs_O[p]-1) / 2 )*( k_O[p[0]] + k_O[p[1]] - 2*ct_pairs_O[p] ) for p in ct_pairs_O.keys())
-    subgraphs[7] = sum(( ct_pairs_O[p] * (ct_pairs_O[p]-1) * (ct_pairs_O[p]-2) / 6 ) for p in ct_pairs_O.keys())  
+    squares = (pairs_O.multiply(pairs_O_m1)) / 2
+    subgraphs[4] = squares.sum()
+    subgraphs[5] = (squares.multiply(pairsO_ksum - 2*pairs_O)).sum()
+    subgraphs[7] = ( (pairs_O.multiply(pairs_O_m1).multiply(pairs_O_m2)) / 6 ).sum()
+    del data_minustwo,pairs_O,pairs_O_m1,pairs_O_m2
 
-    # populate dictionary counting pairs of users who bought each object
-    for o in np.arange(num_O):
-        print o
+    # use sparse matrix to store counts of possible pairs of users who bought each object
+    row = []
+    col = []
+    for o in xrange(num_U,num_U+num_O):
+        #print o - num_U
         if k_O[o] >= 2:
             usr = B.neighbors(o)
             usr.sort()
-            pairs_U = it.combinations(usr,2) # all possible pairs of users who bought object o
-            for p in pairs_U: # counting
-                ct_pairs_U[p] += 1
+            u1,u2 = zip(*it.combinations(usr,2)) # all possible pairs of objects bought by user u
+            row.extend(u1)
+            col.extend(u2)
         B.remove_node(o)
+    B.remove_nodes_from(B.nodes()) # clear graph to clear some memory
 
-    # clear graph to clear some memory
-    B.remove_nodes_from(B.nodes())
+    pairs_U = ssp.coo_matrix((np.ones(len(row)),(row,col)),shape=(num_U,num_U)).tocsr()
+
+    # build the sparse matrices needed for the subgraph computations
+    row,col = (pairs_U > 1).nonzero()
+    data_ksum = [ k_U[row[i]] + k_U[col[i]] for i in xrange(len(row)) ]
+    data_minusone = [ pairs_U[row[i],col[i]]-1 for i in xrange(len(row)) ] 
+    pairs_U = pairs_U.tocsr()
+    pairs_U_ksum = ssp.coo_matrix((data_ksum,(row,col)),shape=(num_U,num_U)).tocsr()
+    pairs_U_m1 = ssp.coo_matrix((data_minusone,(row,col)),shape=(num_U,num_U)).tocsr()
 
     # count u-o-u subgraphs
-    subgraphs[1] = sum(ct_pairs_U.values())
+    subgraphs[1] = pairs_U.sum()
 
     # counting square + o subgraphs
-    subgraphs[6] = sum(( ct_pairs_U[p]*(ct_pairs_U[p]-1)/2 ) * ( k_U[p[0]] + k_U[p[1]] - 2*ct_pairs_U[p] ) for p in ct_pairs_U.keys())
+    subgraphs[6] = ( ((pairs_U.multiply(pairs_U_m1)) / 2) .multiply (pairs_U_ksum-2*pairs_U) ).sum()
 
     return subgraphs
