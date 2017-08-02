@@ -6,21 +6,20 @@ import scipy.sparse as ssp
 
 def count_subgraphs(B, nodes_U=None, nodes_O=None):
     """Counts subgraphs of a bipartite user-object graph
+   Returns
+   - subgraphs[0]: o-u-o
+   - subgraphs[1]: u-o-u
+   - subgraphs[2]: o-u-o u
+   - subgraphs[3]: o-u-o-u / u-o-u-o
+   - subgraphs[4]: square
+   - subgraphs[5]: square + u
+   - subgraphs[6]: square + o
+   - subgraphs[7]: 3 users picking the same 2 objects
 
-        Keyword arguments:
-        B -- networkx bipartite graph
-        nodes_U -- the first set of nodes (default None)
-        nodes_O -- the second set of nodes (default None)
-
-        Returns
-        - subgraphs[0]: o-u-o
-        - subgraphs[1]: u-o-u
-        - subgraphs[2]: o-u-o u
-        - subgraphs[3]: o-u-o-u / u-o-u-o
-        - subgraphs[4]: square
-        - subgraphs[5]: square + u
-        - subgraphs[6]: square + o
-        - subgraphs[7]: 3 users picking the same 2 objects
+    Keyword arguments:
+    B -- networkx bipartite graph
+    nodes_U -- the first set of nodes (default None)
+    nodes_O -- the second set of nodes (default None)
     """
     subgraphs = np.zeros(8,dtype=np.int64)
 
@@ -36,8 +35,8 @@ def count_subgraphs(B, nodes_U=None, nodes_O=None):
     num_U = len(nodes_U)
     num_O = len(nodes_O)
 
-    # relabel nodes to integers to save space
-    B = nx.relabel_nodes(B, dict(zip(nodes_U+nodes_O,np.arange(num_U+num_O))), copy=False)
+    # relabel nodes to integers
+    B = nx.relabel_nodes(B, dict(zip(nodes_U+nodes_O,np.arange(num_U+num_O))), copy=True)
 
     # clear lists of node labels
     del nodes_U, nodes_O
@@ -77,19 +76,16 @@ def count_subgraphs(B, nodes_U=None, nodes_O=None):
     del pairs_O1,pairs_O1_ksum
 
     # build more sparse matrices needed for the other subgraph computations
-    row,col = (pairs_O > 1).nonzero()
-    data_minusone = [ pairs_O[row[i],col[i]]-1 for i in xrange(len(row)) ] 
-    data_minustwo = [ pairs_O[row[i],col[i]]-2 for i in xrange(len(row)) ]
-    pairs_O = pairs_O.tocsr()
-    pairs_O_m1 = ssp.coo_matrix((data_minusone,(row,col)),shape=(num_O+num_U,num_O+num_U)).tocsr()
-    pairs_O_m2 = ssp.coo_matrix((data_minustwo,(row,col)),shape=(num_O+num_U,num_O+num_U)).tocsr()
+    row,col = pairs_O.nonzero()
+    ones = ssp.coo_matrix(([1]*len(row),(row,col)),shape=(num_O+num_U,num_O+num_U)).tocsr()
+    twos = ssp.coo_matrix(([2]*len(row),(row,col)),shape=(num_O+num_U,num_O+num_U)).tocsr()
 
     # counting o-u-o u, square, square+u, and 3-user-same-2-obj subgraphs
-    squares = (pairs_O.multiply(pairs_O_m1)) / 2
+    squares = (pairs_O.multiply(pairs_O-ones)) / 2
     subgraphs[4] = squares.sum()
     subgraphs[5] = (squares.multiply(pairsO_ksum - 2*pairs_O)).sum()
-    subgraphs[7] = ( (pairs_O.multiply(pairs_O_m1).multiply(pairs_O_m2)) / 6 ).sum()
-    del data_minustwo,pairs_O,pairs_O_m1,pairs_O_m2
+    subgraphs[7] = ( (pairs_O.multiply(pairs_O-ones).multiply(pairs_O-twos)) / 6 ).sum()
+    del pairs_O,twos
 
     # use sparse matrix to store counts of possible pairs of users who bought each object
     row = []
@@ -108,17 +104,16 @@ def count_subgraphs(B, nodes_U=None, nodes_O=None):
     pairs_U = ssp.coo_matrix((np.ones(len(row)),(row,col)),shape=(num_U,num_U)).tocsr()
 
     # build the sparse matrices needed for the subgraph computations
-    row,col = (pairs_U > 1).nonzero()
+    row,col = pairs_U.nonzero()
     data_ksum = [ k_U[row[i]] + k_U[col[i]] for i in xrange(len(row)) ]
-    data_minusone = [ pairs_U[row[i],col[i]]-1 for i in xrange(len(row)) ] 
     pairs_U = pairs_U.tocsr()
     pairs_U_ksum = ssp.coo_matrix((data_ksum,(row,col)),shape=(num_U,num_U)).tocsr()
-    pairs_U_m1 = ssp.coo_matrix((data_minusone,(row,col)),shape=(num_U,num_U)).tocsr()
+    ones = ssp.coo_matrix(([1]*len(row),(row,col)),shape=(num_U,num_U)).tocsr()
 
     # count u-o-u subgraphs
     subgraphs[1] = pairs_U.sum()
 
     # counting square + o subgraphs
-    subgraphs[6] = ( ((pairs_U.multiply(pairs_U_m1)) / 2) .multiply (pairs_U_ksum-2*pairs_U) ).sum()
+    subgraphs[6] = ( ((pairs_U.multiply(pairs_U-ones)) / 2) .multiply (pairs_U_ksum-2*pairs_U) ).sum()
 
     return subgraphs
