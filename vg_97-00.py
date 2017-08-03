@@ -65,8 +65,8 @@ s = s.split()
 
 # Printing to file
 mfile = open('subgraphdata_videogames.csv',mode='a')
+mfile.write('1997-2000,' + str(K) + ',' + str(num_U) + ',' + str(num_O) + ',' + str(avg_kU) + ',' + str(avg_kO) + ',')
 for i in np.arange(len(s)-1):
 	mfile.write(s[i] + ',')
 mfile.write(s[-1])
 mfile.write('\n')
-mfile.write('1997-2000,' + str(K) + ',' + str(num_U) + ',' + str(num_O) + ',' + str(avg_kU) + ',' + str(avg_kO) + ',')

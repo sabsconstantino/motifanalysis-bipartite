@@ -70,4 +70,3 @@ for i in np.arange(len(s)-1):
 	mfile.write(s[i] + ',')
 mfile.write(s[-1])
 mfile.write('\n')
-print subgraphs

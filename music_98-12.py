@@ -63,10 +63,10 @@ s = s.replace('[','')
 s = s.replace(']','')
 s = s.split()
 
+# Printing to file
+mfile = open('subgraphdata_music.csv',mode='a')
+mfile.write('1998-2012,' + str(K) + ',' + str(num_U) + ',' + str(num_O) + ',' + str(avg_kU) + ',' + str(avg_kO) + ',')
 for i in np.arange(len(s)-1):
 	mfile.write(s[i] + ',')
 mfile.write(s[-1])
 mfile.write('\n')
-# Printing to file
-mfile = open('subgraphdata_music.csv',mode='a')
-mfile.write('1998-2012,' + str(K) + ',' + str(num_U) + ',' + str(num_O) + ',' + str(avg_kU) + ',' + str(avg_kO) + ',')
