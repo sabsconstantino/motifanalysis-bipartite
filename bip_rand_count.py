@@ -48,7 +48,7 @@ def rand_samedegrees(df, col1, col2, fname, fname_start=0, fname_end=100):
         num_graphs += 1
 
 def rand_randomobj(df, col1, col2, fname, fname_start=0, fname_end=100):
-    """Generates (fname_end-fname_start) random graphs with the same degree of U (col1) and randomized degrees of O (col2). Outputs compressed gml files.
+    """Generates (fname_end-fname_start) random graphs with the same degree of U (col1) and randomized degrees of O (col2; uniform distribution). Outputs compressed gml files.
 
     Keyword arguments:
     df -- pandas dataframe containing network data
@@ -86,6 +86,49 @@ def rand_randomobj(df, col1, col2, fname, fname_start=0, fname_end=100):
             poss_O = set(nodes_O) - set(R.neighbors(u)) # list of objects we can possibly choose from
             objects = np.random.choice(list(poss_O), k_U[u], replace=False)
             R.add_edges_from( zip( [u]*k_U[u], objects ) )
+
+        nx.write_gml(R,fname + str(num_graphs + fname_start) + ".gml.gz")
+        num_graphs += 1
+
+def rand_randomuser(df, col1, col2, fname, fname_start=0, fname_end=100):
+    """Generates (fname_end-fname_start) random graphs with randomized degrees of U (col1) and same degrees of O (col2; uniform distribution). Outputs compressed gml files.
+
+    Keyword arguments:
+    df -- pandas dataframe containing network data
+    col1 -- column name of bipartite node set U
+    col2 -- column name of bipartite node set O
+    fname -- output file prefix
+    fname_start -- starting number of filename (default 0)
+    fname_end -- ending number of filename (default 100)
+    """
+    nodes_U = list(df[col1].unique())
+    nodes_O = list(df[col2].unique())
+    num_O = len(nodes_O)
+    
+    num_graphs = 0
+
+    while num_graphs < (fname_end - fname_start):
+        print num_graphs
+        R = nx.Graph()
+        R.add_nodes_from(nodes_O, bipartite='o')
+        R.add_nodes_from(nodes_U, bipartite='u')
+
+        # choose random users to pair with objects
+        stubs_O = list(df[col2])
+        stubs_U = np.random.choice(nodes_U, len(stubs_O), replace=True)
+        edges = zip(stubs_U, stubs_O)
+        R.add_edges_from(edges)
+
+        # get remaining stubs (in case some edges were rejected from first round)
+        nodes_Oin = [o for o,d in R.nodes(data=True) if d['bipartite']=='o']
+        stubs_Oin = Counter(nx.bipartite.degrees(R,nodes_Oin)[1])
+        k_O = Counter(stubs_O) - stubs_Oin # counter of remaining stubs from U
+
+        # pair remaining stubs
+        for o in k_O.keys():
+            poss_U = set(nodes_U) - set(R.neighbors(o)) # list of objects we can possibly choose from
+            users = np.random.choice(list(poss_U), k_O[o], replace=False)
+            R.add_edges_from( zip( [o]*k_U[o], users ) )
 
         nx.write_gml(R,fname + str(num_graphs + fname_start) + ".gml.gz")
         num_graphs += 1
