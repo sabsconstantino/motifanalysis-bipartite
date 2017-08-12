@@ -4,20 +4,21 @@ from collections import Counter, OrderedDict
 import bip_counter as bc
 import numpy as np
 from datetime import datetime as dt
+import pandas as pd
 
 """This module is generating samples from ensembles of random graphs, and for computing the zscores of the subgraph counts.
 """
 
-def rand_samedegrees(df, col1, col2, fname, fname_start=0, fname_end=100):
-    """Generates (fname_end-fname_start) random graphs with the same degrees as the bipartite network represented by df. Outputs compressed gml files.
+def rand_samedegrees(df, col1, col2, outfile, outfile_start=0, outfile_end=100):
+    """Generates (outfile_end-outfile_start) random graphs with the same degrees as the bipartite network represented by df. Outputs compressed gml files.
 
     Keyword arguments:
     df -- pandas dataframe containing network data
     col1 -- column name of bipartite node set U
     col2 -- column name of bipartite node set O
-    fname -- output file prefix
-    fname_start -- starting number of filename (default 0)
-    fname_end -- ending number of filename (default 100)
+    outfile -- output file prefix
+    outfile_start -- starting number of filename (default 0)
+    outfile_end -- ending number of filename (default 100)
     """
     stubs_U = list(df[col1])
     stubs_O = list(df[col2])
@@ -26,7 +27,7 @@ def rand_samedegrees(df, col1, col2, fname, fname_start=0, fname_end=100):
 
     num_graphs = 0
 
-    while num_graphs < (fname_end - fname_start):
+    while num_graphs < (outfile_end - outfile_start):
         print num_graphs
         k_U = Counter(stubs_U)
 
@@ -44,19 +45,19 @@ def rand_samedegrees(df, col1, col2, fname, fname_start=0, fname_end=100):
                     k_U[u] = k_U[u]-1
 
         R.add_edges_from(edges)
-        nx.write_gml(R,fname + str(num_graphs + fname_start) + ".gml.gz")
+        nx.write_gml(R,outfile + str(num_graphs + outfile_start) + ".gml.gz")
         num_graphs += 1
 
-def rand_randomobj(df, col1, col2, fname, fname_start=0, fname_end=100):
-    """Generates (fname_end-fname_start) random graphs with the same degree of U (col1) and randomized degrees of O (col2; uniform distribution). Outputs compressed gml files.
+def rand_randomobj(df, col1, col2, outfile, outfile_start=0, outfile_end=100):
+    """Generates (outfile_end-outfile_start) random graphs with the same degree of U (col1) and randomized degrees of O (col2; uniform distribution). Outputs compressed gml files.
 
     Keyword arguments:
     df -- pandas dataframe containing network data
     col1 -- column name of bipartite node set U
     col2 -- column name of bipartite node set O
-    fname -- output file prefix
-    fname_start -- starting number of filename (default 0)
-    fname_end -- ending number of filename (default 100)
+    outfile -- output file prefix
+    outfile_start -- starting number of filename (default 0)
+    outfile_end -- ending number of filename (default 100)
     """
     nodes_U = list(df[col1].unique())
     nodes_O = list(df[col2].unique())
@@ -64,7 +65,7 @@ def rand_randomobj(df, col1, col2, fname, fname_start=0, fname_end=100):
     
     num_graphs = 0
 
-    while num_graphs < (fname_end - fname_start):
+    while num_graphs < (outfile_end - outfile_start):
         print num_graphs
         R = nx.Graph()
         R.add_nodes_from(nodes_O, bipartite='o')
@@ -87,19 +88,19 @@ def rand_randomobj(df, col1, col2, fname, fname_start=0, fname_end=100):
             objects = np.random.choice(list(poss_O), k_U[u], replace=False)
             R.add_edges_from( zip( [u]*k_U[u], objects ) )
 
-        nx.write_gml(R,fname + str(num_graphs + fname_start) + ".gml.gz")
+        nx.write_gml(R,outfile + str(num_graphs + outfile_start) + ".gml.gz")
         num_graphs += 1
 
-def rand_randomuser(df, col1, col2, fname, fname_start=0, fname_end=100):
-    """Generates (fname_end-fname_start) random graphs with randomized degrees of U (col1) and same degrees of O (col2; uniform distribution). Outputs compressed gml files.
+def rand_randomuser(df, col1, col2, outfile, outfile_start=0, outfile_end=100):
+    """Generates (outfile_end-outfile_start) random graphs with randomized degrees of U (col1) and same degrees of O (col2; uniform distribution). Outputs compressed gml files.
 
     Keyword arguments:
     df -- pandas dataframe containing network data
     col1 -- column name of bipartite node set U
     col2 -- column name of bipartite node set O
-    fname -- output file prefix
-    fname_start -- starting number of filename (default 0)
-    fname_end -- ending number of filename (default 100)
+    outfile -- output file prefix
+    outfile_start -- starting number of filename (default 0)
+    outfile_end -- ending number of filename (default 100)
     """
     nodes_U = list(df[col1].unique())
     nodes_O = list(df[col2].unique())
@@ -107,7 +108,7 @@ def rand_randomuser(df, col1, col2, fname, fname_start=0, fname_end=100):
     
     num_graphs = 0
 
-    while num_graphs < (fname_end - fname_start):
+    while num_graphs < (outfile_end - outfile_start):
         print num_graphs
         R = nx.Graph()
         R.add_nodes_from(nodes_O, bipartite='o')
@@ -130,32 +131,48 @@ def rand_randomuser(df, col1, col2, fname, fname_start=0, fname_end=100):
             users = np.random.choice(list(poss_U), k_O[o], replace=False)
             R.add_edges_from( zip( [o]*k_U[o], users ) )
 
-        nx.write_gml(R,fname + str(num_graphs + fname_start) + ".gml.gz")
+        nx.write_gml(R,outfile + str(num_graphs + outfile_start) + ".gml.gz")
         num_graphs += 1
 
-def get_zscores(count_from_data,fname,is_compressed=True,fname_start=0,fname_end=100,nodes_U=None,nodes_O=None,outfile=None):
-    """Calculates the zscores of the actual data vs. the random graphs.
+def get_zscores(count_from_data, infile):
+    """Calculates the zscore per subgraph of the actual data vs. the random graphs.
 
     Keyword arguments:
-    count_from_data -- a numpy array containing each subgraph count
-    fname -- filename prefix of random graphs to be used
-    is_compressed -- whether the random graph gml files are compressed (default True)
-    fname_start -- starting number of random graph filename (default 0)
-    fname_end -- ending number of random graph filename (default 100)
-    nodes_U -- unique list or set of nodes corresponding to bipartite node set U. This is necessary when there is no 'bipartite' node attribute in the random graph data. (default None)
-    nodes_O -- unique list or set of nodes corresponding to bipartite node set O. This is necessary when there is no 'bipartite' node attribute in the random graph data. (default None)
-    outfile -- file where the subgraph counts of the random graphs are to be written (default None)
+    count_from_data -- an array containing subgraph counts of the actual data
+    infile -- name of file containing subgraph counts of each random graph
     """
     num_subgraphs = len(count_from_data)
-    num_rg = fname_end - fname_start
+    zscores = np.zeros(num_subgraphs,dtype=np.float64)
+    ensemble_counts = pd.read_csv(infile, header=0, dtype=np.int64).as_matrix()
+    mjus = np.mean(ensemble_counts,axis=0)
+    sigmas = np.std(ensemble_counts,axis=0)
+    zscores = (count_from_data - mjus) / sigmas
+
+    return zscores
+
+
+def get_counts(outfile,infile,is_compressed=True,infile_start=0,infile_end=100,nodes_U=None,nodes_O=None):
+    """Counts the subgraphs of the random graphs.
+
+    Keyword arguments:
+    outfile -- file where the subgraph counts of the random graphs are to be written
+    outfile -- filename prefix of random graphs to be counted
+    is_compressed -- whether the random graph gml files are compressed (default True)
+    infile_start -- starting number of random graph filename (default 0)
+    infile_end -- ending number of random graph filename (default 100)
+    nodes_U -- unique list or set of nodes corresponding to bipartite node set U. This is necessary when there is no 'bipartite' node attribute in the random graph data. (default None)
+    nodes_O -- unique list or set of nodes corresponding to bipartite node set O. This is necessary when there is no 'bipartite' node attribute in the random graph data. (default None)
+    """
+    num_subgraphs = 8
+    num_rg = infile_end - infile_start
     ensemble_counts = np.zeros([num_rg,num_subgraphs],dtype=np.int64)
     i = 0
     while i < num_rg:
-        nth = fname_start + i
+        nth = infile_start + i
         if not is_compressed:
-            G = nx.read_gml(fname + str(nth) + ".gml")
+            G = nx.read_gml(infile + str(nth) + ".gml")
         else:
-            G = nx.read_gml(fname + str(nth) + ".gml.gz")
+            G = nx.read_gml(infile + str(nth) + ".gml.gz")
         ensemble_counts[i] = bc.count_subgraphs(G, nodes_U=nodes_U, nodes_O=nodes_O)
         print str(nth) +' '+ str(dt.now())
         i += 1
@@ -165,13 +182,11 @@ def get_zscores(count_from_data,fname,is_compressed=True,fname_start=0,fname_end
     mjus = np.mean(ensemble_counts,axis=0)
     sigmas = np.std(ensemble_counts,axis=0)
 
-    zscores = (count_from_data - mjus) / sigmas
-
-    if outfile != None:
-        h = ''
-        for i in np.arange(num_subgraphs-1):
-            h += 'subgraph_' + str(i) + ','
-        h += 'subgraph_' + str(num_subgraphs-1)
-        np.savetxt(outfile, ensemble_counts, header=h, delimiter=',')
+    h = ''
+    for i in np.arange(num_subgraphs-1):
+        h += 'subgraph_' + str(i) + ','
+    h += 'subgraph_' + str(num_subgraphs-1)
+    np.savetxt(outfile, ensemble_counts, header=h, delimiter=',')
 
     return zscores
+
