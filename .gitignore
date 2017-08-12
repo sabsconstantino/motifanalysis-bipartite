@@ -1,5 +1,17 @@
 # Data
+data/*
+plots/*
+random_counts/*
+random_graphs/*
 *.csv
+
+# Logs
+*.txt
 
 # Python compile files
 *.pyc
+
+# External .py files used (can be found here: http://tuvalu.santafe.edu/~aaronc/powerlaws/)
+plfit.py
+plplot.py
+randht.py
