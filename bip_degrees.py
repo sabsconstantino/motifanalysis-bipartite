@@ -61,3 +61,7 @@ vg12_kU,vg12_kO = nx.bipartite.degrees(B,nodes_O)
 B = nx.from_pandas_dataframe(pc.df_vg_14,source='user',target='product')
 nodes_O = list(pc.df_vg_14['product'].unique())
 vg14_kU,vg14_kO = nx.bipartite.degrees(B,nodes_O)
+
+B = nx.from_pandas_dataframe(pc.df_vg_14x,source='user',target='product')
+nodes_O = list(pc.df_vg_14x['product'].unique())
+vg14x_kU,vg14x_kO = nx.bipartite.degrees(B,nodes_O)
