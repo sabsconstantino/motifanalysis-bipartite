@@ -1,6 +1,5 @@
 import networkx as nx
-import random
-from collections import Counter, OrderedDict
+from collections import Counter
 import bip_counter as bc
 import numpy as np
 from datetime import datetime as dt
@@ -24,7 +23,8 @@ def rand_samedegrees(df, col1, col2, outfile, outfile_start=0, outfile_end=100):
     stubs_O = list(df[col2])
 
     k_O = Counter(stubs_O).most_common() # list of node-degree tuples (o, k_o)
-
+    stubs_O1 = [o[0] for o in k_O if o[1]==1] # get all objects with degree 1
+    k_O = [o for o in k_O if o[1]!=1] # all other objects
     num_graphs = 0
 
     while num_graphs < (outfile_end - outfile_start):
@@ -35,16 +35,24 @@ def rand_samedegrees(df, col1, col2, outfile, outfile_start=0, outfile_end=100):
         R.add_nodes_from(set(stubs_U), bipartite='u')
         R.add_nodes_from(set(stubs_O), bipartite='o')
         edges = []
+
+        # perform stub matching on all objects with degree greater than 1
         for o in k_O:
-            users = np.random.choice(k_U.keys(),o[1],replace=False)
-            edges.extend(zip( [o[0]]*o[1], users ))
+            users = np.random.choice(k_U.keys(),o[1],replace=False) # choose k_o users without replacement
+            edges = zip( [o[0]]*o[1], users )
+            R.add_edges_from(edges)
+            # removal of stubs from users
             for u in users:
                 if k_U[u] == 1:
                     del k_U[u]
                 else:
                     k_U[u] = k_U[u]-1
 
-        R.add_edges_from(edges)
+        # perform stub matching on all objects with degree 1
+        stubs_U_rem = list(k_U.elements())
+        np.random.shuffle(stubs_U_rem)
+        R.add_edges_from(zip(stubs_O1,stubs_U_rem))
+
         nx.write_gml(R,outfile + str(num_graphs + outfile_start) + ".gml.gz")
         num_graphs += 1
 
@@ -129,7 +137,7 @@ def rand_randomuser(df, col1, col2, outfile, outfile_start=0, outfile_end=100):
         for o in k_O.keys():
             poss_U = set(nodes_U) - set(R.neighbors(o)) # list of objects we can possibly choose from
             users = np.random.choice(list(poss_U), k_O[o], replace=False)
-            R.add_edges_from( zip( [o]*k_U[o], users ) )
+            R.add_edges_from( zip( [o]*k_O[o], users ) )
 
         nx.write_gml(R,outfile + str(num_graphs + outfile_start) + ".gml.gz")
         num_graphs += 1
@@ -143,7 +151,7 @@ def get_zscores(count_from_data, infile):
     """
     num_subgraphs = len(count_from_data)
     zscores = np.zeros(num_subgraphs,dtype=np.float64)
-    ensemble_counts = pd.read_csv(infile, header=0, dtype=np.int64).as_matrix()
+    ensemble_counts = pd.read_csv(infile, header=0).as_matrix()
     mjus = np.mean(ensemble_counts,axis=0)
     sigmas = np.std(ensemble_counts,axis=0)
     zscores = (count_from_data - mjus) / sigmas
@@ -178,15 +186,8 @@ def get_counts(outfile,infile,is_compressed=True,infile_start=0,infile_end=100,n
         i += 1
         del G
 
-    zscores = np.zeros(num_subgraphs,dtype=np.float64)
-    mjus = np.mean(ensemble_counts,axis=0)
-    sigmas = np.std(ensemble_counts,axis=0)
-
     h = ''
     for i in np.arange(num_subgraphs-1):
         h += 'subgraph_' + str(i) + ','
     h += 'subgraph_' + str(num_subgraphs-1)
     np.savetxt(outfile, ensemble_counts, header=h, delimiter=',')
-
-    return zscores
-

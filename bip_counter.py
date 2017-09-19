@@ -1,7 +1,6 @@
 import networkx as nx
 import numpy as np
 import itertools as it
-from collections import defaultdict
 import scipy.sparse as ssp
 
 def count_subgraphs(B, nodes_U=None, nodes_O=None):
@@ -11,16 +10,19 @@ def count_subgraphs(B, nodes_U=None, nodes_O=None):
    - subgraphs[0]: o-u-o
    - subgraphs[1]: u-o-u
    - subgraphs[2]: o-u-o u
-   - subgraphs[3]: o-u-o-u / u-o-u-o
-   - subgraphs[4]: square
-   - subgraphs[5]: square + u
-   - subgraphs[6]: square + o
-   - subgraphs[7]: 3 users picking the same 2 objects
+   - subgraphs[3]: o-u-o-u (path)
+   - subgraphs[4]: cycle
+   - subgraphs[5]: cycle + u
+   - subgraphs[6]: cycle + o
+   - subgraphs[7]: 3 users picking the same 2 objects (complete 3+2 bipartite)
 
     Keyword arguments:
     B -- networkx bipartite graph
     nodes_U -- the first set of nodes (default None)
     nodes_O -- the second set of nodes (default None)
+
+    Reference used:
+    [1] Filter values from a scipy sparse matrix, https://stackoverflow.com/questions/22074163/filter-values-from-a-scipy-sparse-matrix
     """
     subgraphs = np.zeros(8,dtype=np.int64)
 
@@ -33,12 +35,8 @@ def count_subgraphs(B, nodes_U=None, nodes_O=None):
     num_U = len(nodes_U)
     num_O = len(nodes_O)
 
-    # relabel nodes to integers
-    B = nx.relabel_nodes(B, dict(zip(nodes_U+nodes_O,np.arange(num_U+num_O))), copy=True)
-
-    # clear lists of node labels
-    del nodes_U, nodes_O
-
+    B = nx.relabel_nodes(B, dict(zip(nodes_U+nodes_O,np.arange(num_U+num_O))), copy=True) # relabel nodes to integers
+    del nodes_U, nodes_O # clear lists of node labels
     k_U,k_O = nx.bipartite.degrees(B,np.arange(num_U,num_U+num_O)) # get node degrees
 
     # use sparse matrix to store counts of possible pairs of objects that were bought by each user
@@ -76,7 +74,6 @@ def count_subgraphs(B, nodes_U=None, nodes_O=None):
     row = []
     col = []
     for o in xrange(num_U,num_U+num_O):
-        #print o - num_U
         if k_O[o] >= 2:
             usr = B.neighbors(o)
             usr.sort()
@@ -88,11 +85,10 @@ def count_subgraphs(B, nodes_U=None, nodes_O=None):
 
     pairs_U = ssp.coo_matrix((np.ones(len(row)),(row,col)),shape=(num_U,num_U)).tocsr()
 
-    # count u-o-u subgraphs
-    subgraphs[1] = pairs_U.sum()
+    subgraphs[1] = pairs_U.sum() # count u-o-u subgraphs
 
     # intermediate results needed for subgraph 6 computation
-    pairs_U = pairs_U.multiply(pairs_U > 1) # https://stackoverflow.com/questions/22074163/filter-values-from-a-scipy-sparse-matrix
+    pairs_U = pairs_U.multiply(pairs_U > 1) # "filter out" all object pairs with 0 to 1 common users [1]
     row,col = pairs_U.nonzero()
     data_ksum = [ k_U[row[i]] + k_U[col[i]] for i in xrange(len(row)) ]
     pairsU_ksum = ssp.coo_matrix((data_ksum,(row,col)),shape=(num_U,num_U)).tocsr()
@@ -100,7 +96,6 @@ def count_subgraphs(B, nodes_U=None, nodes_O=None):
     squares = (pairs_U.multiply(pairs_U-ones)) / 2
     unique_neighbors = pairsU_ksum - 2*pairs_U
 
-    # counting square + o subgraphs
-    subgraphs[6] = (squares.multiply(unique_neighbors)).sum()
+    subgraphs[6] = (squares.multiply(unique_neighbors)).sum() # counting cycle + o subgraphs
 
     return subgraphs
